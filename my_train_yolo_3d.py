@@ -116,11 +116,15 @@ def compute_map(pred_masks, gt_masks, pred_scores, iou_thresh=0.5):
     return ap
 
 class MultiviewDataset(torch.utils.data.Dataset):
-    def __init__(self, data_root, split='train'):
+    def __init__(self, data_root, split='train', splits_path=None):
         self.data_root = data_root
         self.split = split
-        with open(os.path.join(data_root, 'splits.json'), 'r') as f:
-            splits = json.load(f)
+        if splits_path:
+            with open(splits_path, 'r') as f:
+                splits = json.load(f)
+        else:
+            with open(os.path.join(data_root, 'splits.json'), 'r') as f:
+                splits = json.load(f)
         self.samples = splits[split]
 
     def __len__(self):
@@ -221,6 +225,7 @@ def evaluate_epoch(model, loader, epoch, debug=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_path', type=str, required=True, help='Path to multiview_dataset')
+    parser.add_argument('--splits_path', type=str, default=None, help='Path to splits.json')
     parser.add_argument('--epochs', type=int, default=50, help='Max epochs')
     parser.add_argument('--debug', action='store_true', help='Debug mode')
     parser.add_argument('--batch_size', type=int, default=1, help='Batch size for training/validation')
@@ -232,7 +237,7 @@ def main():
     print(f"Initializing dataset from {opt.data_path}")
     
     # Check splits exist, if not generate them for the sake of the script working
-    splits_path = os.path.join(opt.data_path, 'splits.json')
+    splits_path = opt.splits_path if opt.splits_path else os.path.join(opt.data_path, 'splits.json')
     if not os.path.exists(splits_path):
         import glob
         samples = [os.path.basename(p) for p in glob.glob(os.path.join(opt.data_path, 'sample_*'))]
@@ -247,8 +252,8 @@ def main():
         with open(splits_path, 'w') as f:
             json.dump(splits, f)
 
-    train_dataset = MultiviewDataset(opt.data_path, split='train')
-    val_dataset = MultiviewDataset(opt.data_path, split='val')
+    train_dataset = MultiviewDataset(opt.data_path, split='train', splits_path=opt.splits_path)
+    val_dataset = MultiviewDataset(opt.data_path, split='val', splits_path=opt.splits_path)
     
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False)
