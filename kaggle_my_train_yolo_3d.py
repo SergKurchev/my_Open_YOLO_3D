@@ -8,38 +8,71 @@
 !git clone https://github.com/SergKurchev/my_Open_YOLO_3D.git /kaggle/working/my_Open_YOLO_3D
 
 # %% [code]
-# 2. Robust Virtual Environment Creation (Handling Python 3.12+ host)
+# 2. Robust Virtual Environment Creation (Handling Python 3.12+ host & Missing Conda)
 import os
 import subprocess
 import sys
 import urllib.request
+import tarfile
 
 print(f"Host Python version: {sys.version}")
 
-# Target Python version for OpenYOLO3D dependencies (compatible with Torch 1.12.1 and MinkowskiEngine)
 TARGET_PYTHON_VERSION = "3.10.9"
-base_python = sys.executable
 
-# If host is 3.11+, we MUST provision 3.10.x because MinkowskiEngine/Torch 1.12.1 don't support 3.12
-if sys.version_info >= (3, 11):
-    print(f"Host Python is 3.11+. Provisioning Python {TARGET_PYTHON_VERSION} via conda to ensure compatibility...")
+def get_python310_base():
+    """Utility to find or provision Python 3.10 on Kaggle."""
+    # Level 1: System Check
+    print("Searching for Python 3.10 in system...")
+    for path in ["/usr/bin/python3.10", "/usr/local/bin/python3.10"]:
+        if os.path.exists(path):
+            print(f"Found system Python 3.10 at {path}")
+            return path
+
+    # Level 2: Conda Check
     PY310_PATH = "/kaggle/working/conda_py310"
-    if not os.path.exists(PY310_PATH):
-        # Using absolute path for conda on Kaggle
-        conda_bin = "/opt/conda/bin/conda"
-        if not os.path.exists(conda_bin):
-            # Fallback to searching PATH
-            conda_bin = "conda"
+    if os.path.exists(os.path.join(PY310_PATH, "bin", "python")):
+        return os.path.join(PY310_PATH, "bin", "python")
         
-        subprocess.run([conda_bin, "create", "-y", "-p", PY310_PATH, f"python={TARGET_PYTHON_VERSION}"], check=True)
-    base_python = os.path.join(PY310_PATH, "bin", "python")
-    print(f"Using {base_python} as the base for the virtual environment.")
+    conda_bin = "/opt/conda/bin/conda" if os.path.exists("/opt/conda/bin/conda") else "conda"
+    try:
+        print(f"Attempting to provision Python 3.10 via {conda_bin}...")
+        subprocess.run([conda_bin, "create", "-y", "-p", PY310_PATH, f"python={TARGET_PYTHON_VERSION}"], 
+                       check=True, capture_output=True)
+        return os.path.join(PY310_PATH, "bin", "python")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Conda failed or not found. Moving to Micromamba fallback...")
+
+    # Level 3: Micromamba Fallback (Standalone binary)
+    MAMBA_BIN = "/kaggle/working/micromamba"
+    MAMBA_ROOT = "/kaggle/working/mamba_env"
+    
+    if not os.path.exists(MAMBA_BIN):
+        print("Downloading micromamba standalone binary...")
+        url = "https://micro.mamba.pm/api/micromamba/linux-64/latest"
+        urllib.request.urlretrieve(url, "micromamba.tar.bz2")
+        with tarfile.open("micromamba.tar.bz2", "r:bz2") as tar:
+            tar.extract("bin/micromamba")
+        os.rename("bin/micromamba", MAMBA_BIN)
+        os.chmod(MAMBA_BIN, 0o755)
+        
+    if not os.path.exists(os.path.join(MAMBA_ROOT, "bin", "python")):
+        print(f"Creating Python {TARGET_PYTHON_VERSION} environment via micromamba...")
+        subprocess.run([MAMBA_BIN, "create", "-y", "-p", MAMBA_ROOT, "-c", "conda-forge", f"python={TARGET_PYTHON_VERSION}"], check=True)
+        
+    return os.path.join(MAMBA_ROOT, "bin", "python")
+
+# Decide base Python
+base_python = sys.executable
+if sys.version_info >= (3, 11):
+    print("Host Python is 3.11+. We need Python 3.10 for Torch 1.12.1 compatibility.")
+    base_python = get_python310_base()
+    print(f"Base Python set to: {base_python}")
 
 VENV_PATH = "/kaggle/working/openyolo_env"
 
 if not os.path.exists(VENV_PATH):
-    print(f"Creating virtual environment at {VENV_PATH}...")
-    # Using the provisioned 3.10 base to create your customized venv
+    print(f"Creating virtual environment at {VENV_PATH} using {base_python}...")
+    # Your core venv logic (as requested)
     subprocess.run([base_python, "-m", "venv", VENV_PATH, "--without-pip"], check=True)
     
     VENV_PYTHON_TMP = os.path.join(VENV_PATH, "bin", "python")
@@ -52,9 +85,9 @@ if not os.path.exists(VENV_PATH):
     
     if os.path.exists("get-pip.py"):
         os.remove("get-pip.py")
-    print("Pip successfully installed!")
+    print("Pip successfully installed in venv!")
 
-# Final absolute paths
+# Final absolute paths for subsequent cells
 VENV_PYTHON = os.path.join(VENV_PATH, "bin", "python")
 VENV_PIP = os.path.join(VENV_PATH, "bin", "pip")
 
