@@ -9,7 +9,8 @@
 
 # %% [code]
 # 2. Create the virtual environment
-!python -m venv /kaggle/working/openyolo_env
+!pip install virtualenv
+!virtualenv /kaggle/working/openyolo_env
 
 # %% [code]
 # 3. Upgrade pip and install requirements (assuming conda / environment.yml equivalent for pip)
