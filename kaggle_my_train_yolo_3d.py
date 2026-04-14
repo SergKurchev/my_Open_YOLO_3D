@@ -8,22 +8,20 @@
 !git clone https://github.com/SergKurchev/my_Open_YOLO_3D.git /kaggle/working/my_Open_YOLO_3D
 
 # %% [code]
-# 2. Create the virtual environment
-!python -m venv /kaggle/working/openyolo_env
 
 # %% [code]
 # 3. Upgrade pip and install requirements (assuming conda / environment.yml equivalent for pip)
 # In Kaggle it is faster to just install torch and other dependencies via pip inside the venv
-!/kaggle/working/openyolo_env/bin/python -m pip install --upgrade pip
-!/kaggle/working/openyolo_env/bin/pip install torch torchvision numpy pandas scipy tqdm pyyaml open3d imageio scikit-learn
+!pip install --upgrade pip
+!pip install torch torchvision numpy pandas scipy tqdm pyyaml open3d imageio scikit-learn
 
 # %% [code]
 # OpenYOLO3D also relies on mmengine and mmyolo
-!/kaggle/working/openyolo_env/bin/pip install openmim
-!/kaggle/working/openyolo_env/bin/mim install mmengine
-!/kaggle/working/openyolo_env/bin/mim install "mmcv>=2.0.0"
-!/kaggle/working/openyolo_env/bin/mim install "mmdet>=3.0.0"
-!/kaggle/working/openyolo_env/bin/pip install mmyolo supervision
+!pip install openmim
+!mim install mmengine
+!mim install "mmcv>=2.0.0"
+!mim install "mmdet>=3.0.0"
+!pip install mmyolo supervision
 
 # %% [code]
 # 4. Run the training script matching the Evaluation Protocol
@@ -33,8 +31,8 @@ import os
 dataset_path = "/kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset"
 assert os.path.exists(dataset_path), "Dataset path not found, please add the dataset to the kernel!"
 
-run_cmd = f"cd /kaggle/working/my_Open_YOLO_3D/OpenYOLO3D && /kaggle/working/openyolo_env/bin/python my_train_yolo_3d.py --data_path {dataset_path} --epochs 100 --batch_size 4 --lr 0.0001 --weight_decay 1e-4"
+run_cmd = f"cd /kaggle/working/my_Open_YOLO_3D/OpenYOLO3D && python my_train_yolo_3d.py --data_path {dataset_path} --epochs 100 --batch_size 4 --lr 0.0001 --weight_decay 1e-4"
 print(f"Executing: {run_cmd}")
 
 # %% [code]
-!cd /kaggle/working/my_Open_YOLO_3D/OpenYOLO3D && /kaggle/working/openyolo_env/bin/python my_train_yolo_3d.py --data_path /kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset --epochs 100 --batch_size 4 --lr 0.0001 --weight_decay 1e-4
+!cd /kaggle/working/my_Open_YOLO_3D/OpenYOLO3D && python my_train_yolo_3d.py --data_path /kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset --epochs 100 --batch_size 4 --lr 0.0001 --weight_decay 1e-4
