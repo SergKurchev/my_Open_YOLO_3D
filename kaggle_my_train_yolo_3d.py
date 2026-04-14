@@ -25,7 +25,13 @@ if sys.version_info >= (3, 11):
     print(f"Host Python is 3.11+. Provisioning Python {TARGET_PYTHON_VERSION} via conda to ensure compatibility...")
     PY310_PATH = "/kaggle/working/conda_py310"
     if not os.path.exists(PY310_PATH):
-        subprocess.run(["conda", "create", "-y", "-p", PY310_PATH, f"python={TARGET_PYTHON_VERSION}"], check=True)
+        # Using absolute path for conda on Kaggle
+        conda_bin = "/opt/conda/bin/conda"
+        if not os.path.exists(conda_bin):
+            # Fallback to searching PATH
+            conda_bin = "conda"
+        
+        subprocess.run([conda_bin, "create", "-y", "-p", PY310_PATH, f"python={TARGET_PYTHON_VERSION}"], check=True)
     base_python = os.path.join(PY310_PATH, "bin", "python")
     print(f"Using {base_python} as the base for the virtual environment.")
 
