@@ -42,7 +42,7 @@ def get_python310_base():
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("Conda failed or not found. Moving to Micromamba fallback...")
 
-    # Level 3: Micromamba Fallback (Standalone binary)
+    # Level 3: Micromamba Fallback
     MAMBA_BIN = "/kaggle/working/micromamba"
     MAMBA_ROOT = "/kaggle/working/mamba_env"
     
@@ -72,7 +72,6 @@ VENV_PATH = "/kaggle/working/openyolo_env"
 
 if not os.path.exists(VENV_PATH):
     print(f"Creating virtual environment at {VENV_PATH} using {base_python}...")
-    # Your core venv logic (as requested)
     subprocess.run([base_python, "-m", "venv", VENV_PATH, "--without-pip"], check=True)
     
     VENV_PYTHON_TMP = os.path.join(VENV_PATH, "bin", "python")
@@ -80,12 +79,13 @@ if not os.path.exists(VENV_PATH):
     print("Downloading get-pip.py for manual pip installation...")
     urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", "get-pip.py")
     
-    print("Installing pip into the virtual environment...")
-    subprocess.run([VENV_PYTHON_TMP, "get-pip.py"], check=True)
+    print("Installing and pinning pip < 24.1 + setuptools + wheel...")
+    # NOTE: Downgrading pip is REQUIRED for pytorch-lightning 1.7.2 metadata compatibility
+    subprocess.run([VENV_PYTHON_TMP, "get-pip.py", "pip<24.1", "setuptools", "wheel"], check=True)
     
     if os.path.exists("get-pip.py"):
         os.remove("get-pip.py")
-    print("Pip successfully installed in venv!")
+    print("Pip and build tools successfully installed in venv!")
 
 # Final absolute paths for subsequent cells
 VENV_PYTHON = os.path.join(VENV_PATH, "bin", "python")
@@ -94,20 +94,23 @@ VENV_PIP = os.path.join(VENV_PATH, "bin", "pip")
 # %% [code]
 # 3. Install Dependencies (Following Installation.md strictly)
 print("Step 3.1: Installing Torch and specialized base dependencies...")
+# Explicitly install base tools that Minkowski and Detectron2 need
+!{VENV_PIP} install setuptools wheel packaging cython
 !{VENV_PIP} install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
+# Pre-compiled torch-scatter
 !{VENV_PIP} install torch-scatter -f https://data.pyg.org/whl/torch-1.12.1+cu113.html
+# Detectron2 dependencies before the main install
 !{VENV_PIP} install 'git+https://github.com/facebookresearch/detectron2.git@710e7795d0eeadf9def0e7ef957eea13532e34cf' --no-deps
 
 # MinkowskiEngine
 print("Step 3.2: Installing MinkowskiEngine (recursive clone + custom compilation)...")
-!cd /kaggle/working && git clone --recursive "https://github.com/NVIDIA/MinkowskiEngine"
+!cd /kaggle/working && rm -rf MinkowskiEngine && git clone --recursive "https://github.com/NVIDIA/MinkowskiEngine"
 !cd /kaggle/working/MinkowskiEngine && git checkout 02fc608bea4c0549b0a7b00ca1bf15dee4a0b228
-# Setting arch list for Kaggle GPUs (T4/P100)
 !cd /kaggle/working/MinkowskiEngine && export TCNN_CUDA_ARCH_LIST="60;61;70;75;80;86" && {VENV_PYTHON} setup.py install --force_cuda --blas=openblas
 
 # ScanNet Segmentator
 print("Step 3.3: Compiling ScanNet Segmentator...")
-!cd /kaggle/working/my_Open_YOLO_3D/models/Mask3D/third_party && git clone https://github.com/ScanNet/ScanNet.git
+!cd /kaggle/working/my_Open_YOLO_3D/models/Mask3D/third_party && rm -rf ScanNet && git clone https://github.com/ScanNet/ScanNet.git
 !cd /kaggle/working/my_Open_YOLO_3D/models/Mask3D/third_party/ScanNet/Segmentator && git checkout 3e5726500896748521a6ceb81271b0f5b2c0e7d2 && make
 
 # pointnet2
