@@ -49,7 +49,6 @@ run_cmd("pip install --quiet 'numpy<2.0.0'")
 DEPENDENCIES = [
     "torch==2.3.1+cu121 torchvision==0.18.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121",
     "ninja",
-    "tensorview",
     "pccm",
     "ccimport",
     "cumm-cu121",
