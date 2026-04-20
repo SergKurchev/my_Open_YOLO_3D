@@ -1,7 +1,10 @@
 import torch.nn as nn
+import MinkowskiEngine as ME
+
 from mask3d.models.model import Model
 from mask3d.models.modules.common import ConvType, NormType, conv, get_norm, sum_pool
 from mask3d.models.modules.resnet_block import BasicBlock, Bottleneck
+
 
 class ResNetBase(Model):
     BLOCK = None
@@ -45,7 +48,7 @@ class ResNetBase(Model):
             D=self.D,
             bn_momentum=bn_momentum,
         )
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = ME.MinkowskiReLU(inplace=True)
         self.pool = sum_pool(
             kernel_size=space_n_time_m(2, 1), stride=space_n_time_m(2, 1), D=D
         )
@@ -89,9 +92,9 @@ class ResNetBase(Model):
 
     def weight_initialization(self):
         for m in self.modules():
-            if isinstance(m, nn.BatchNorm1d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+            if isinstance(m, ME.MinkowskiBatchNorm):
+                nn.init.constant_(m.bn.weight, 1)
+                nn.init.constant_(m.bn.bias, 0)
 
     def _make_layer(
         self,
@@ -150,8 +153,8 @@ class ResNetBase(Model):
 
     def forward(self, x):
         x = self.conv1(x)
-        x = x.replace_feature(self.bn1(x.features))
-        x = x.replace_feature(self.relu(x.features))
+        x = self.bn1(x)
+        x = self.relu(x)
         x = self.pool(x)
 
         x = self.layer1(x)
@@ -162,22 +165,79 @@ class ResNetBase(Model):
         x = self.final(x)
         return x
 
+
 class ResNet14(ResNetBase):
     BLOCK = BasicBlock
     LAYERS = (1, 1, 1, 1)
+
 
 class ResNet18(ResNetBase):
     BLOCK = BasicBlock
     LAYERS = (2, 2, 2, 2)
 
+
 class ResNet34(ResNetBase):
     BLOCK = BasicBlock
     LAYERS = (3, 4, 6, 3)
+
 
 class ResNet50(ResNetBase):
     BLOCK = Bottleneck
     LAYERS = (3, 4, 6, 3)
 
+
 class ResNet101(ResNetBase):
     BLOCK = Bottleneck
     LAYERS = (3, 4, 23, 3)
+
+
+class STResNetBase(ResNetBase):
+
+    CONV_TYPE = ConvType.SPATIAL_HYPERCUBE_TEMPORAL_HYPERCROSS
+
+    def __init__(self, in_channels, out_channels, config, D=4, **kwargs):
+        super().__init__(in_channels, out_channels, config, D, **kwargs)
+
+
+class STResNet14(STResNetBase, ResNet14):
+    pass
+
+
+class STResNet18(STResNetBase, ResNet18):
+    pass
+
+
+class STResNet34(STResNetBase, ResNet34):
+    pass
+
+
+class STResNet50(STResNetBase, ResNet50):
+    pass
+
+
+class STResNet101(STResNetBase, ResNet101):
+    pass
+
+
+class STResTesseractNetBase(STResNetBase):
+    CONV_TYPE = ConvType.HYPERCUBE
+
+
+class STResTesseractNet14(STResTesseractNetBase, STResNet14):
+    pass
+
+
+class STResTesseractNet18(STResTesseractNetBase, STResNet18):
+    pass
+
+
+class STResTesseractNet34(STResTesseractNetBase, STResNet34):
+    pass
+
+
+class STResTesseractNet50(STResTesseractNetBase, STResNet50):
+    pass
+
+
+class STResTesseractNet101(STResTesseractNetBase, STResNet101):
+    pass

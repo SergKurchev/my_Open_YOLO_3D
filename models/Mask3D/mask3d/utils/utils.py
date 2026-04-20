@@ -81,8 +81,11 @@ def load_backbone_checkpoint_with_missing_or_exsessive_keys(cfg, model):
     return cfg, model
 
 
+from openyolo3d.utils.weight_adapter import adapt_checkpoint
+
 def load_checkpoint_with_missing_or_exsessive_keys(cfg, model):
-    state_dict = torch.load(cfg.general.checkpoint)["state_dict"]
+    ckpt = adapt_checkpoint(cfg.general.checkpoint)
+    state_dict = ckpt["state_dict"]
     correct_dict = dict(model.state_dict())
 
     # if parametrs not found in checkpoint they will be randomly initialized

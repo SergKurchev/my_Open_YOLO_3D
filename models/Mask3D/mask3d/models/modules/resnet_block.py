@@ -1,8 +1,5 @@
 import torch.nn as nn
-from MinkowskiEngine import MinkowskiReLU
-
 from mask3d.models.modules.common import ConvType, NormType, conv, get_norm
-
 
 class BasicBlockBase(nn.Module):
     expansion = 1
@@ -46,39 +43,39 @@ class BasicBlockBase(nn.Module):
         self.norm2 = get_norm(
             self.NORM_TYPE, planes, D, bn_momentum=bn_momentum
         )
-        self.relu = MinkowskiReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
 
     def forward(self, x):
-        residual = x
+        identity = x
 
         out = self.conv1(x)
-        out = self.norm1(out)
-        out = self.relu(out)
+        # spconv layers return SparseConvTensor
+        # We apply norm and relu to the features
+        out = out.replace_feature(self.norm1(out.features))
+        out = out.replace_feature(self.relu(out.features))
 
         out = self.conv2(out)
-        out = self.norm2(out)
+        out = out.replace_feature(self.norm2(out.features))
 
         if self.downsample is not None:
-            residual = self.downsample(x)
+            identity = self.downsample(x)
 
-        out += residual
-        out = self.relu(out)
+        # Skip connection: add features
+        # Note: In SubMConv environments, coordinates match exactly
+        out = out.replace_feature(out.features + identity.features)
+        out = out.replace_feature(self.relu(out.features))
 
         return out
-
 
 class BasicBlock(BasicBlockBase):
     NORM_TYPE = NormType.BATCH_NORM
 
-
 class BasicBlockIN(BasicBlockBase):
     NORM_TYPE = NormType.INSTANCE_NORM
 
-
 class BasicBlockINBN(BasicBlockBase):
     NORM_TYPE = NormType.INSTANCE_BATCH_NORM
-
 
 class BottleneckBase(nn.Module):
     expansion = 4
@@ -119,39 +116,30 @@ class BottleneckBase(nn.Module):
             self.NORM_TYPE, planes * self.expansion, D, bn_momentum=bn_momentum
         )
 
-        self.relu = MinkowskiReLU(inplace=True)
+        self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
 
     def forward(self, x):
-        residual = x
+        identity = x
 
         out = self.conv1(x)
-        out = self.norm1(out)
-        out = self.relu(out)
+        out = out.replace_feature(self.norm1(out.features))
+        out = out.replace_feature(self.relu(out.features))
 
         out = self.conv2(out)
-        out = self.norm2(out)
-        out = self.relu(out)
+        out = out.replace_feature(self.norm2(out.features))
+        out = out.replace_feature(self.relu(out.features))
 
         out = self.conv3(out)
-        out = self.norm3(out)
+        out = out.replace_feature(self.norm3(out.features))
 
         if self.downsample is not None:
-            residual = self.downsample(x)
+            identity = self.downsample(x)
 
-        out += residual
-        out = self.relu(out)
+        out = out.replace_feature(out.features + identity.features)
+        out = out.replace_feature(self.relu(out.features))
 
         return out
 
-
 class Bottleneck(BottleneckBase):
     NORM_TYPE = NormType.BATCH_NORM
-
-
-class BottleneckIN(BottleneckBase):
-    NORM_TYPE = NormType.INSTANCE_NORM
-
-
-class BottleneckINBN(BottleneckBase):
-    NORM_TYPE = NormType.INSTANCE_BATCH_NORM

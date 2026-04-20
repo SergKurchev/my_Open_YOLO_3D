@@ -16,8 +16,8 @@
 - **Аннотации**: Instance segmentation masks (PNG), camera parameters (JSON)
 - **Splits**: 292 train / 36 val / 38 test samples (80/10/10)
 - **Расположение на Kaggle**: `sergeykurchev/strawpick-sint-pointnetseg-test`
-- **Путь**: `/kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset/`
-- **Разделение на train/val/test**: `sergeykurchev/strawpick-sint-pointnetseg-test/multiview_dataset/splits.json`
+- **Путь**: `/kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset/multiview_dataset/`
+- **Разделение на train/val/test**: `sergeykurchev/strawpick-sint-pointnetseg-test/splits.json`
 
 **Особенности датасета**:
 - Depth maps: 0.5-1.3m range

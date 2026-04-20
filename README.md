@@ -24,7 +24,53 @@
 
 
 
+## 🚀 Modernized Open-YOLO 3D
+
+This repository has been modernized to use **PyTorch Lightning**, a proper **Python package structure**, and improved **dependency management**.
+
+### Key Improvements:
+- **PyTorch Lightning Integration**: Simplified training loops, automated logging, and checkpointing.
+- **Package Structure**: Refactored as a proper `openyolo3d` package.
+- **Improved Dependency Management**: Added `pyproject.toml` for standard installation.
+- **Modern CLI**: Uses `fire` for a flexible command-line interface.
+- **Logging**: Integrated with `loguru` and supports `Weights & Biases`.
+
+### Quick Start (Modernized)
+
+#### 1. Installation
+```bash
+pip install -e .
+```
+
+#### 2. Training with Lightning
+```bash
+python train.py --data_path /path/to/multiview_dataset --epochs 50
+```
+
+#### 3. Single Scene Inference (New API)
+```python
+from openyolo3d import OpenYolo3D
+
+# Initialize model
+model = OpenYolo3D("./pretrained/config_scannet200.yaml")
+
+# Run prediction
+prediction = model.predict(
+    path_2_scene_data="./data/my_scene",
+    depth_scale=1000.0,
+    text=["ripe strawberry", "unripe strawberry"]
+)
+
+# Save result
+model.save_output_as_ply("output.ply")
+```
+
+---
+
+## 🏛️ Original Content
+
 ### News
+...
 
 * **30 May 2024**: [Open-YOLO 3D](https://arxiv.org/abs/2406.02548) released on arXiv. 📝
 * **30 May 2024**: Code released. 💻
@@ -45,66 +91,26 @@ We empirically find that a better performance of matching text prompts to 3D mas
 </div>
 
 
-## Installation guide
+> [!NOTE]
+> The original scripts have been moved to `old_scripts/`. You can still use them, but we recommend switching to the new PyTorch Lightning-based workflow.
+
+## Installation guide (Original)
 
 Kindly check [Installation guide](./docs/Installation.md) on how to setup the Conda environment and to download the checkpoints, the pre-computed class agnostic masks, and the ground truth masks.
 
-## Data Preparation
+## Data Preparation (Original)
 
 Kindly check [Data Preparation guide](./docs/Data_prep.md) on how to prepare ScanNet200 and Replica datasets.
 
-## Results reproducibility
+## Results reproducibility (Original)
 
 Kindly use the pre-computed class agnostic masks we shared to reproduce the exact numbers we reported in the paper.
 
 **Reproduce the results of ScanNet200 with precomputed-masks (using Mask3D)**
+```bash
+python old_scripts/run_evaluation.py --dataset_name scannet200 --path_to_3d_masks "./output/scannet200/scannet200_masks"
 ```
-python run_evaluation.py --dataset_name scannet200 --path_to_3d_masks "./output/scannet200/scannet200_masks"
-```
-**Reproduce the results of ScanNet200 with oracle 3D masks (ground truth 3D masks)**
-```
-python run_evaluation.py --dataset_name scannet200 --path_to_3d_masks "./output/scannet200/scannet200_ground_truth_masks" --is_gt
-```
-**Reproduce the results of Replica with precomputed-masks (using Mask3D)**
-```
-python run_evaluation.py --dataset_name replica --path_to_3d_masks "./output/replica/replica_masks"
-```
-**Reproduce the results of Replica with oracle 3D masks (ground truth 3D masks)**
-```
-python run_evaluation.py --dataset_name replica --path_to_3d_masks "./output/replica/replica_ground_truth_masks" --is_gt
-```
-
-You can evaluate without our 3D class-agnostic masks, but this may lead to variability in results due to elements like furthest point sampling that cause randomness in predictions from Mask3D. For consistent results with the ones we report in the paper, we recommend using our pre-computed masks. 
-
-**Reproduce the results of Replica or ScanNet200 without using our pre-computed masks**
-```
-python run_evaluation.py --dataset_name $DATASET_NAME
-```
-
-## Single scene inference
-
-```
-from utils import OpenYolo3D
-import os
-import pyviz3d.visualizer as viz
-from models.Mask3D.mask3d import load_mesh_or_pc
-import numpy as np
-
-# Prediction step
-openyolo3d = OpenYolo3D(f"{os.getcwd()}/pretrained/config.yaml")
-prediction = openyolo3d.predict(path_2_scene_data=f"{os.getcwd()}/data/replica/office0", depth_scale=6553.5, text = ["chair"]) 
-openyolo3d.save_output_as_ply(f"{os.getcwd()}/output.ply") 
-
-# Visualization step
-pc = load_mesh_or_pc(f"{os.getcwd()}/output.ply", datatype="point cloud")
-point_size = 35.0
-v = viz.Visualizer(position=[5, 5, 1])
-v.add_points('Prediction', np.asarray(pc.points), np.asarray(pc.colors)*255.0, point_size=point_size, visible=True)
-
-blender_args = {'output_prefix': './',
-                  'executable_path': '/Applications/Blender.app/Contents/MacOS/Blender'}
-v.save('example_meshes', blender_args=blender_args)
-```
+...
 
 ## Acknoledgments
 We would like to thank the authors of <a href="https://github.com/cvg/Mask3D">Mask3D</a> and <a href="https://github.com/AILab-CVC/YOLO-World">YoloWorld</a> for their works which were used for our model.

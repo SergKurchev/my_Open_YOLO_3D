@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openyolo3d"
+version = "0.1.0"
+description = "A modernized version of Open-YOLO-3D for strawberry detection and segmentation."
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "SergKurchev", email = "kurchev.sergey@gmail.com"}
+]
+keywords = ["3d-detection", "yolo", "instance-segmentation", "strawberry", "robotics"]
+dependencies = [
+    "torch>=2.3.1",
+    "torchvision",
+    "pytorch-lightning>=2.3.0",
+    "numpy>=2.0.0",
+    "pandas",
+    "tqdm",
+    "opencv-python-headless",
+    "scipy",
+    "pyyaml",
+    "scikit-image",
+    "scikit-learn",
+    "open3d>=0.19.0",
+    "trimesh",
+    "plyfile",
+    "pyquaternion",
+    "wandb",
+    "loguru",
+    "fire"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "isort",
+    "flake8",
+    "mypy"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openyolo3d*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100

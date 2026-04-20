@@ -196,11 +196,20 @@ def prepare_data(pointcloud_file, datatype, device):
         coordinates, _ = ME.utils.sparse_collate(coords=coordinates, feats=features)
     
     features = torch.cat(features, dim=0)
-    data = ME.SparseTensor(
-        coordinates=coordinates,
+    
+    # Calculate spatial shape for spconv
+    # Coordinates in ME were [N, 4] with batch index in [:, 0]
+    # spconv needs spatial_shape [Z, Y, X]
+    all_coords = coordinates[:, 1:].cpu().numpy()
+    spatial_shape = (all_coords.max(axis=0) + 1).astype(int).tolist()
+    
+    data = spconv.SparseConvTensor(
         features=features,
-        device=device,
-    )
+        indices=coordinates,
+        spatial_shape=spatial_shape,
+        batch_size=len(coordinates[:, 0].unique()),
+    ).to(device)
+    
     return data, points, colors, features, unique_map, inverse_map, point2segment, point2segment_full
 
 
