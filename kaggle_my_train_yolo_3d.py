@@ -43,8 +43,16 @@ def run_cmd(cmd):
 
 # %% [code]
 print("--- Setting up environment ---")
+# Downgrade NumPy to 1.26.4 (NumPy 2.0.x is incompatible with spconv/cumm JIT)
+run_cmd("pip install --quiet 'numpy<2.0.0'")
+
 DEPENDENCIES = [
     "torch==2.3.1+cu121 torchvision==0.18.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121",
+    "ninja",
+    "tensorview",
+    "pccm",
+    "ccimport",
+    "cumm-cu121",
     "spconv-cu121",
     "torch-scatter -f https://data.pyg.org/whl/torch-2.3.1+cu121.html",
     "pytorch-lightning==2.2.1",
