@@ -9,6 +9,21 @@
 # - **Evaluation Protocol**: Full support for PQ, SQ, RQ, and mAP metrics.
 
 # %% [code]
+# 1. Clone Repository and Enter Directory
+import os
+if not os.path.exists('my_Open_YOLO_3D'):
+    print("Cloning repository...")
+    os.system('git clone -b modernize_repo https://github.com/SergKurchev/my_Open_YOLO_3D.git')
+
+# Move into the repository directory if we are not already there
+if os.path.basename(os.getcwd()) != 'my_Open_YOLO_3D':
+    if os.path.exists('my_Open_YOLO_3D'):
+        os.chdir('my_Open_YOLO_3D')
+        print(f"Changed directory to: {os.getcwd()}")
+    else:
+        print("ERROR: Repository directory 'my_Open_YOLO_3D' not found!")
+
+# %% [code]
 import os
 import subprocess
 import sys
@@ -56,6 +71,7 @@ for dep in DEPENDENCIES:
 
 # %% [code]
 print("--- Installing local packages ---")
+# Now that we are inside the repo, this will find pyproject.toml
 run_cmd("pip install -e .")
 
 # %% [markdown]
