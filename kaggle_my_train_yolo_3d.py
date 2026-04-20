@@ -10,7 +10,7 @@ def run_cmd(cmd):
 print("--- Setting up environment ---")
 # On Kaggle, we can directly use pip. We'll target CUDA 12.1 compatible wheels.
 DEPENDENCIES = [
-    "torch==2.3.1+cu121 torchvision==0.16.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121",
+    "torch==2.3.1+cu121 torchvision==0.18.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121",
     "spconv-cu121",
     "torch-scatter -f https://data.pyg.org/whl/torch-2.3.1+cu121.html",
     "pytorch-lightning==2.2.1",
