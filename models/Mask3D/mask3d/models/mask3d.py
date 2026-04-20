@@ -4,9 +4,9 @@ import torch.nn as nn
 import spconv.pytorch as spconv
 import numpy as np
 from torch.nn import functional as F
-from mask3d.models.modules.common import conv
-from mask3d.models.position_embedding import PositionEmbeddingCoordsSine
-from mask3d.models.modules.helpers_3detr import GenericMLP
+from .modules.common import conv
+from .position_embedding import PositionEmbeddingCoordsSine
+from .modules.helpers_3detr import GenericMLP
 from torch_scatter import scatter_mean, scatter_max
 from torch.cuda.amp import autocast
 

@@ -1,14 +1,33 @@
+# %% [markdown]
+# # Open-YOLO-3D Modernized Training Pipeline
+# This notebook implements the modernized Open-YOLO-3D training and evaluation protocol on Kaggle.
+#
+# **Features:**
+# - **Python 3.12 / Torch 2.3+ / CUDA 12.1**
+# - **SpConv 2.x** backend (no MinkowskiEngine required)
+# - **2D-to-3D GT Projection**: Automatic consensus voting to generate 3D Ground Truth from 2D masks.
+# - **Evaluation Protocol**: Full support for PQ, SQ, RQ, and mAP metrics.
+
+# %% [code]
 import os
 import subprocess
 import sys
 
 def run_cmd(cmd):
     print(f"Executing: {cmd}")
-    subprocess.run(cmd, shell=True, check=True)
+    # Ensure models/Mask3D is in PYTHONPATH for the subprocess
+    env = os.environ.copy()
+    root_dir = os.getcwd()
+    mask3d_path = os.path.join(root_dir, "models", "Mask3D")
+    env["PYTHONPATH"] = f"{root_dir}:{mask3d_path}:" + env.get("PYTHONPATH", "")
+    subprocess.run(cmd, shell=True, check=True, env=env)
 
-# 1. Environment Setup (Kaggle System Python)
+# %% [markdown]
+# ## 1. Environment Setup (Kaggle System Python)
+# We install dependencies into the system environment to avoid ABI conflicts.
+
+# %% [code]
 print("--- Setting up environment ---")
-# On Kaggle, we can directly use pip. We'll target CUDA 12.1 compatible wheels.
 DEPENDENCIES = [
     "torch==2.3.1+cu121 torchvision==0.18.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121",
     "spconv-cu121",
@@ -32,20 +51,25 @@ DEPENDENCIES = [
 for dep in DEPENDENCIES:
     run_cmd(f"pip install --quiet {dep}")
 
-# 2. Local Package Installation
+# %% [markdown]
+# ## 2. Local Package Installation
+
+# %% [code]
 print("--- Installing local packages ---")
-# Install the current directory as a package
 run_cmd("pip install -e .")
 
-# 3. Preparation for Evaluation Protocol
+# %% [markdown]
+# ## 3. Dataset Configuration
+
+# %% [code]
 print("--- Preparing Dataset and Evaluation ---")
-# The dataset path is provided by the user in Kaggle
-# /kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset/
 DATASET_PATH = "/kaggle/input/strawpick-sint-pointnetseg-test/multiview_dataset/multiview_dataset/"
 SPLITS_PATH = "/kaggle/input/strawpick-sint-pointnetseg-test/splits.json"
 
-# 4. Running the Training
-# We use the modernized train.py
+# %% [markdown]
+# ## 4. Running the Training
+
+# %% [code]
 TRAIN_CMD = (
     f"python train.py "
     f"--data_path {DATASET_PATH} "

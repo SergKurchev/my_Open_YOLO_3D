@@ -1,6 +1,16 @@
+import sys
+import os
 import torch
-from models.Mask3D.mask3d import get_model, prepare_data, map_output_to_pointcloud
 from .utils.paths import resolve_path
+
+# Add Mask3D to sys.path to handle its internal absolute imports
+# This allows 'import mask3d' to work within the Mask3D sub-package
+root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+mask3d_path = os.path.join(root_dir, "models", "Mask3D")
+if mask3d_path not in sys.path:
+    sys.path.insert(0, mask3d_path)
+
+from models.Mask3D.mask3d import get_model, prepare_data, map_output_to_pointcloud
 
 class Network_3D():
     def __init__(self, config):

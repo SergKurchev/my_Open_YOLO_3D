@@ -2,8 +2,9 @@ import hydra
 import torch
 from torch_scatter import scatter_mean
 
-from mask3d.models.mask3d import Mask3D
-from mask3d.utils.utils import (
+import spconv.pytorch as spconv
+from .models.mask3d import Mask3D
+from .utils.utils import (
     load_checkpoint_with_missing_or_exsessive_keys,
     load_backbone_checkpoint_with_missing_or_exsessive_keys,
 )
@@ -25,18 +26,17 @@ from hydra.experimental import initialize, compose
 
 # imports for input loading
 import albumentations as A
-import MinkowskiEngine as ME
 import numpy as np
 import open3d as o3d
 
 # imports for output
-from mask3d.datasets.scannet200.scannet200_constants import (VALID_CLASS_IDS_20, VALID_CLASS_IDS_200, SCANNET_COLOR_MAP_20, SCANNET_COLOR_MAP_200)
+from .datasets.scannet200.scannet200_constants import (VALID_CLASS_IDS_20, VALID_CLASS_IDS_200, SCANNET_COLOR_MAP_20, SCANNET_COLOR_MAP_200)
 
 def get_model(checkpoint_path=None, dataset_name = "scannet200"):
 
 
     # Initialize the directory with config files
-    with initialize(config_path="conf"):
+    with initialize(config_path="conf", version_base=None):
         # Compose a configuration
         cfg = compose(config_name="config_base_instance_segmentation.yaml")
 
@@ -122,7 +122,7 @@ def load_mesh_or_pc(pointcloud_file, datatype):
             exit()
     return data
 
-def prepare_data(pointcloud_file, datatype, device):
+def prepare_data(pointcloud_file, datatype, device, voxel_size=0.02):
     # normalization for point cloud features
     color_mean = (0.47793125906962, 0.4303257521323044, 0.3749598901421883)
     color_std = (0.2834475483823543, 0.27566157565723015, 0.27018971370874995)
@@ -144,72 +144,54 @@ def prepare_data(pointcloud_file, datatype, device):
             exit()
         segments = None
     elif pointcloud_file.split('.')[-1] == 'npy':
-        points = np.load(pointcloud_file)
+        points_data = np.load(pointcloud_file)
         points, colors, normals, segments, labels = (
-            points[:, :3],
-            points[:, 3:6],
-            points[:, 6:9],
-            points[:, 9],
-            points[:, 10:12],
+            points_data[:, :3],
+            points_data[:, 3:6],
+            points_data[:, 6:9],
+            points_data[:, 9],
+            points_data[:, 10:12],
         )
         datatype = "mesh"
-        
     else:
         print("FORMAT NOT SUPPORTED")
         exit()
+
     if datatype == "mesh":
         pseudo_image = colors.astype(np.uint8)[np.newaxis, :, :]
         colors = np.squeeze(normalize_color(image=pseudo_image)["image"])
 
-    coords = np.floor(points / 0.02)
-    _, _, unique_map, inverse_map = ME.utils.sparse_quantize(
-        coordinates=coords,
-        features=colors,
-        return_index=True,
-        return_inverse=True,
-    )
-
-    sample_coordinates = coords[unique_map]
-    coordinates = [torch.from_numpy(sample_coordinates).int()]
-    sample_features = colors[unique_map]
-    features = [torch.from_numpy(sample_features).float()]
-
-    if segments is not None:
-        point2segment_full = segments
-        point2segment = segments[unique_map]
-        point2segment = [torch.from_numpy(point2segment).long()]
-        point2segment_full = [torch.from_numpy(point2segment_full).long()]
-
-        # Concatenate all lists
-        input_dict = {"coords": coordinates, "feats": features}
-        if len(point2segment) > 0:
-            input_dict["labels"] = point2segment
-            coordinates, _, point2segment = ME.utils.sparse_collate(**input_dict)
-            point2segment = point2segment.cuda()
-        else:
-            coordinates, _ = ME.utils.sparse_collate(**input_dict)
-            point2segment = None
-            point2segment_full = None
-    else: 
-        point2segment = None
-        point2segment_full = None
-        coordinates, _ = ME.utils.sparse_collate(coords=coordinates, feats=features)
+    # Manual Voxelization (Equivalent to ME.utils.sparse_quantize)
+    coords = np.floor(points / voxel_size).astype(np.int32)
+    _, unique_map, inverse_map = np.unique(coords, axis=0, return_index=True, return_inverse=True)
     
-    features = torch.cat(features, dim=0)
+    sample_coordinates = coords[unique_map]
+    sample_features = colors[unique_map]
+    
+    # spconv needs [N, 4] with batch index in column 0
+    batch_idx = np.zeros((len(sample_coordinates), 1), dtype=np.int32)
+    coordinates = np.concatenate([batch_idx, sample_coordinates], axis=1)
+    
+    coordinates = torch.from_numpy(coordinates).int().to(device)
+    features = torch.from_numpy(sample_features).float().to(device)
     
     # Calculate spatial shape for spconv
-    # Coordinates in ME were [N, 4] with batch index in [:, 0]
-    # spconv needs spatial_shape [Z, Y, X]
-    all_coords = coordinates[:, 1:].cpu().numpy()
-    spatial_shape = (all_coords.max(axis=0) + 1).astype(int).tolist()
+    all_coords = sample_coordinates
+    spatial_shape = (all_coords.max(axis=0) - all_coords.min(axis=0) + 1).astype(int).tolist()
     
     data = spconv.SparseConvTensor(
         features=features,
         indices=coordinates,
         spatial_shape=spatial_shape,
-        batch_size=len(coordinates[:, 0].unique()),
-    ).to(device)
+        batch_size=1,
+    )
     
+    point2segment = None
+    point2segment_full = None
+    if segments is not None:
+        point2segment_full = torch.from_numpy(segments).long().to(device)
+        point2segment = torch.from_numpy(segments[unique_map]).long().to(device)
+        
     return data, points, colors, features, unique_map, inverse_map, point2segment, point2segment_full
 
 
